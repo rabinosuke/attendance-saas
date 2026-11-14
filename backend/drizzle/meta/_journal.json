@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794586729507,
+      "tag": "0000_init_companies",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794600497446,
+      "tag": "0001_add_employees",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794663284037,
+      "tag": "0002_rainy_santa_claus",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "id": "1c563dae-6277-437b-ac46-a7343bf4529a",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.companies": {
+      "name": "companies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_code_norm": {
+          "name": "company_code_norm",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "company_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'setting'"
+        },
+        "next_login_sequence": {
+          "name": "next_login_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(0) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP(0)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(0) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP(0)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "companies_company_code_norm_key": {
+          "name": "companies_company_code_norm_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "company_code_norm"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "companies_company_code_format": {
+          "name": "companies_company_code_format",
+          "value": "\"companies\".\"company_code_norm\" ~ '^[a-z0-9_-]{3,32}$'"
+        },
+        "companies_name_not_blank": {
+          "name": "companies_name_not_blank",
+          "value": "btrim(\"companies\".\"name\") <> ''"
+        },
+        "companies_next_login_sequence_positive": {
+          "name": "companies_next_login_sequence_positive",
+          "value": "\"companies\".\"next_login_sequence\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.company_status": {
+      "name": "company_status",
+      "schema": "public",
+      "values": [
+        "setting",
+        "active",
+        "suspended"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
