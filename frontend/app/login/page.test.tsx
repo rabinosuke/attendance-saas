@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { sendLoginRequest } from "@/lib/api/auth";
 import LoginPage from "./page";
@@ -15,11 +15,19 @@ vi.mock("@/lib/api/auth", () => ({
 
 // Next.jsの画面移動機能を、このテスト内では仮の機能に置き換える。
 // Vitestがログイン画面を読み込む前に、この置き換えを適用する。
+// 画面移動用の仮関数を、テストからも確認できる場所に作る。
+// vi.hoistedの中は、importより先に実行される。
+const routerMocks = vi.hoisted(() => ({
+  // 移動先のURLなど、呼び出された内容を記録する。
+  replace: vi.fn(),
+
+  // 画面データの再取得が呼ばれたことを記録する。
+  refresh: vi.fn(),
+}));
+
+// ログイン画面のuseRouter()に、上で作った仮関数を渡す。
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    replace: vi.fn(),
-    refresh: vi.fn(),
-  }),
+  useRouter: () => routerMocks,
 }));
 
 test("ログインに必要な入力欄とボタンが表示される", () => {
@@ -73,4 +81,49 @@ test("ログインに失敗するとエラーメッセージが表示される",
     loginId: "demo-user",
     password: "wrong-password",
   });
+});
+
+test("ログインに成功するとトップ画面への移動処理が呼ばれる", async () => {
+  // 前のテストで記録された、関数の呼び出し履歴を消す。
+  // 仮の関数が返す値などの設定は残る。
+  vi.clearAllMocks();
+
+  // 次の1回のログイン通信だけ、成功結果を返すようにする。
+  vi.mocked(sendLoginRequest).mockResolvedValueOnce({
+    success: true,
+    message: "ログインしました。",
+  });
+
+  // ログイン画面を表示する。
+  render(<LoginPage />);
+
+  // 会社IDを入力する。
+  fireEvent.change(screen.getByLabelText("会社ID"), {
+    target: { value: "demo-company" },
+  });
+
+  // 本人IDを入力する。
+  fireEvent.change(screen.getByLabelText("本人ID"), {
+    target: { value: "demo-user" },
+  });
+
+  // テスト用のパスワードを入力する。
+  fireEvent.change(screen.getByLabelText("パスワード"), {
+    target: { value: "sample-password" },
+  });
+
+  // ログインボタンを押す。
+  fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+
+  // 成功結果を受け取り、画面移動の処理が呼ばれるまで待つ。
+  await waitFor(() => {
+    // トップ画面のURL「/」へ移動する処理が呼ばれたか確認する。
+    expect(routerMocks.replace).toHaveBeenCalledWith("/");
+
+    // 画面データを再取得する処理が1回呼ばれたか確認する。
+    expect(routerMocks.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  // 成功した場合、エラーメッセージが表示されていないことを確認する。
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
