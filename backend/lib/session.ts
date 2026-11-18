@@ -97,9 +97,9 @@ export async function setSessionCookie(
     // ページ内のJavaScriptから、このCookieを読み取れなくする。
     httpOnly: true,
 
-    // 本番ではHTTPS接続だけで送信する。
-    // 開発中はhttp://localhostを使うため、falseにする。
-    secure: process.env.NODE_ENV === "production",
+    // 開発・本番とも、ブラウザの公開入口はHTTPSを使う。
+    // ログイン用CookieにSecure属性を付ける。
+    secure: true,
 
     // 別サイトからのリクエストで、Cookieを送る条件を制限する。
     sameSite: "lax",

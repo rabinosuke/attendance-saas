@@ -8,3 +8,5 @@ coverage/
 *.log
 *.tsbuildinfo
 .DS_Store
+# 開発用の証明書と秘密鍵。
+docker/nginx/certs/

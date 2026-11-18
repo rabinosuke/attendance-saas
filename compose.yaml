@@ -5,10 +5,87 @@ services:
       dockerfile: docker/frontend.Dockerfile
     volumes:
       - ./frontend:/app
-    ports:
-      - "127.0.0.1:3000:3000"
     command: npm run dev -- --hostname 0.0.0.0
 
+    # ブラウザからの通信を受け付ける、Nginxのサービス。
+  nginx:
+    # nginxユーザーの作成と、そのユーザーで動かす設定が済んだイメージ。
+    # @sha256以降は、動作確認したイメージと同じ内容に固定する指定。
+    image: nginx/nginx-unprivileged:stable@sha256:bf862988aa6e67f92cf0ddeeeb53c1e23023bc71132e444e7f6f7605f68dd8a5
+    # イメージ内のnginxユーザーで実行する。
+    user: "101:101"
+    # コンテナの通常のファイル領域を書き込み禁止にする。
+    read_only: true
+    # Linucの権限を剥奪
+    cap_drop:
+      - ALL
+    # プログラム実行によって、新たな権限を得ることを禁止する。
+    security_opt:
+      - no-new-privileges:true
+    # Mac側のポートと、Nginxコンテナ内のポートをつなぐ。
+    ports:
+      - "127.0.0.1:3000:8443"
+      - "127.0.0.1:18080:8080"
+    # Nginxの設定に使う値を、コンテナへ渡す。
+    environment:
+      APP_ORIGIN: ${APP_ORIGIN:?APP_ORIGINを.envに設定してください}
+      APP_HOST: ${APP_HOST:?APP_HOSTを.envに設定してください}
+      # 画面の転送先。frontendサービス内の3000番。
+      FRONTEND_UPSTREAM: frontend:3000
+      # 共通APIの転送先。今は既存backendサービスを使う。
+      PLATFORM_UPSTREAM: backend:3000
+      # Docker内のDNSへ、サービス名に対応するIPを問い合わせる。
+      NGINX_RESOLVER: 127.0.0.11
+      # 生成した設定ファイルを保存する、コンテナ内のディレクトリ。
+      NGINX_ENVSUBST_OUTPUT_DIR: "/etc/nginx/conf.d"
+      # この5つの環境変数だけ、テンプレート内で値に置き換える。
+      NGINX_ENVSUBST_FILTER: "^(APP_ORIGIN|APP_HOST|FRONTEND_UPSTREAM|PLATFORM_UPSTREAM|NGINX_RESOLVER)$$"
+
+    volumes:
+    # Nginx全体の設定。
+    - type: bind
+      source: ./docker/nginx/nginx.conf
+      target: /etc/nginx/nginx.conf
+      read_only: true
+      bind:
+        create_host_path: false
+
+    # 起動時に変換するテンプレート。
+    - type: bind
+      source: ./docker/nginx/templates
+      target: /etc/nginx/templates
+      read_only: true
+      bind:
+        create_host_path: false
+
+    # 各locationからincludeする共通設定。
+    - type: bind
+      source: ./docker/nginx/snippets
+      target: /etc/nginx/snippets
+      read_only: true
+      bind:
+        create_host_path: false
+    # ブラウザへ提示する証明書。公開鍵を含む。
+    - type: bind
+      source: ${TLS_CERT_FILE:?TLS_CERT_FILEを.envに設定してください}
+      target: /etc/nginx/certs/tls.pem
+      read_only: true
+      bind:
+        create_host_path: false
+
+    # Nginxが署名に使う秘密鍵。
+    - type: bind
+      source: ${TLS_KEY_FILE:?TLS_KEY_FILEを.envに設定してください}
+      target: /etc/nginx/certs/tls-key.pem
+      read_only: true
+      bind:
+        create_host_path: false
+    tmpfs:
+    # NginxのPIDや、処理中の一時ファイルを置く場所。
+    - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+
+    # 起動用スクリプトが、変換した設定ファイルを書き出す場所。
+    - /etc/nginx/conf.d:rw,noexec,nosuid,size=1m,uid=101,gid=101,mode=0755
   backend:
     build:
       context: .
@@ -16,6 +93,9 @@ services:
     volumes:
       - ./backend:/app
     environment:
+      # ログイン要求を許可する画面のOriginを渡す。
+      APP_ORIGIN: ${APP_ORIGIN:?APP_ORIGINを.envに設定してください}
+
       PGHOST: db
       PGPORT: "5432"
       PGDATABASE: ${POSTGRES_DB}

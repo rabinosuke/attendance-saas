@@ -24,7 +24,7 @@ export type LoginResult = {
 export async function sendLoginRequest(
   input: LoginRequest,
 ): Promise<LoginResult> {
-  // 開発中はrewrites、本番ではNginxがbackendへ転送する。
+  // 公開入口のNginxが、このAPI要求をbackendへ転送する。
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: {
