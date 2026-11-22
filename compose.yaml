@@ -32,8 +32,8 @@ services:
       APP_HOST: ${APP_HOST:?APP_HOSTを.envに設定してください}
       # 画面の転送先。frontendサービス内の3000番。
       FRONTEND_UPSTREAM: frontend:3000
-      # 共通APIの転送先。今は既存backendサービスを使う。
-      PLATFORM_UPSTREAM: backend:3000
+      # 共通APIの転送先。platform-apiサービス内の3000番。
+      PLATFORM_UPSTREAM: platform-api:3000
       # Docker内のDNSへ、サービス名に対応するIPを問い合わせる。
       NGINX_RESOLVER: 127.0.0.11
       # 生成した設定ファイルを保存する、コンテナ内のディレクトリ。
@@ -86,6 +86,23 @@ services:
 
     # 起動用スクリプトが、変換した設定ファイルを書き出す場所。
     - /etc/nginx/conf.d:rw,noexec,nosuid,size=1m,uid=101,gid=101,mode=0755
+  platform-api:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    volumes:
+      - ./platform-api:/app
+    environment:
+      APP_ORIGIN: ${APP_ORIGIN:?APP_ORIGINを.envに設定してください}
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npm run dev -- --hostname 0.0.0.0
   backend:
     build:
       context: .
